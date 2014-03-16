@@ -1,11 +1,11 @@
 /*
- *  This file is part of the RDF Encoding code written by Long Cheng.
- *
+ *  This file is part of the RDF Encoding test code.
+ * 
  *  This file is licensed to You under the Eclipse Public License (EPL);
  *  You may not use this file except in compliance with the License.
  *  You may obtain a copy of the License at
  *      http://www.opensource.org/licenses/eclipse-1.0.php
- *
+ * 
  */
 
 import x10.io.File;
@@ -26,7 +26,7 @@ import x10.compiler.NativeCPPCompilationUnit;
 
 //encode all the triples and ouput them to disk
 
-public class encode {
+public class Hello {
 	
 	@Native("c++","gzRead(#1->c_str())")
 	static native def gzRead(file:String):String;
@@ -233,7 +233,6 @@ public class encode {
 							triple_list(here.id).add(line);
 						}
 					}
-					System.gc();
 				}
 			}
 			
@@ -309,7 +308,7 @@ public class encode {
 				}
 			}
 			
-			//PUSH BACK
+			//push back
 			finish for( p in Place.places()){
 				at (p) async {
 					val loc_2=here.id;	
@@ -376,11 +375,11 @@ public class encode {
 						}
 					}	
 					
-					//print out the encoded triples
-					var x:Int=0;
-					for(i in 0..(IdFile.size()/3-1)){
-						pr.println(IdFile(x).toString()+"\t"+IdFile(x+1).toString()+"\t"+IdFile(x+2).toString());
-						x+=3;
+					//print out the encoded triples in integer
+					var id_final:Long;
+					for(term in term_collector(here.id)){
+						id_final=tmp_dict.get(term).value;
+						pr.println(id_final);
 					}
 					pr.flush();
 					pr.close();					
