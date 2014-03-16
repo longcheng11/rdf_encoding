@@ -1,3 +1,13 @@
+/*
+ *  This file is part of the RDF Encoding code written by Long Cheng.
+ *
+ *  This file is licensed to You under the Eclipse Public License (EPL);
+ *  You may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *      http://www.opensource.org/licenses/eclipse-1.0.php
+ *
+ */
+
 import x10.io.File;
 import x10.io.FileWriter;
 import x10.util.ArrayList;
