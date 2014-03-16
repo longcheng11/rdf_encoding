@@ -1,7 +1,7 @@
 rdf_encoding
 ============
 
-test code for Large-scale RDF data encoding using X10
+basic test code for Large-scale RDF data encoding using X10
 
 
 1, To improve the system I/O over disk, a small library based on zlib has been built and integrated in the x10 code 
