@@ -14,4 +14,4 @@ test code for Large-scale RDF data encoding using X10
 
 3, How to set the enviorment of x10, please refer to http://x10-lang.org/.
 
-4, If any questions, please email to lcheng(at)eeng.nuim.ie
+4, If any questions, please email to lcheng(AT)eeng.nuim.ie
