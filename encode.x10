@@ -355,7 +355,7 @@ public class encode {
 		finish for( p in Place.places()){
 			at (p) async {    
 				
-				var opath:String="/data/RDF_Processing/data_1b/"+here.id.toString()+".long";
+				var opath:String="/data/"+here.id.toString()+".long";
 				var OutFile:File=new File(opath);
 				val pr=OutFile.printer(true);
 				var tmp_dict:HashMap[String,Long]=new HashMap[String,Long](counters(here.id)(0));
