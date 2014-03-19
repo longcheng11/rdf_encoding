@@ -26,7 +26,7 @@ import x10.compiler.NativeCPPCompilationUnit;
 
 //encode all the triples and ouput them to disk
 
-public class Hello {
+public class encode {
 	
 	@Native("c++","gzRead(#1->c_str())")
 	static native def gzRead(file:String):String;
@@ -177,9 +177,7 @@ public class Hello {
 		val N:Int=Place.MAX_PLACES;
 		Console.OUT.println("the number of places is "+N);
 		
-		val loop:Int=Int.parseInt(args(0));
-		//val InPath:String=args(1);
-		// val chunks:Int=Int.parseInt(args(1));
+		val I:Int=Int.parseInt(args(0)); //number of chunks per place
 		val r:Region=0..(N-1);
 		val d:Dist=Dist.makeBlock(r);
 		
@@ -191,7 +189,6 @@ public class Hello {
 		val table_2_value=DistArray.make[ArrayList[RemoteArray[Long]]](d);
 		val counters=DistArray.make[Array[Int]](d);
 		val triple_list=DistArray.make[ArrayList[String]](d);	
-		val pfilter=DistArray.make[HashSet[Long]](d);
 		
 		finish for (p in table.dist.places()){
 			at (p) async {
@@ -202,194 +199,186 @@ public class Hello {
 				term_collector(here.id)=new ArrayList[String]();
 				counters(here.id)=new Array[Int](1,0);
 				triple_list(here.id)=new ArrayList[String]();				
-				pfilter(here.id)=new HashSet[Long]();
 			}
 		}
 		
-		//Console.OUT.println("///////////////// Start to Read Triples////////////////");
 		var read_start:Long=System.currentTimeMillis();
 		
-		for (var IE:int=0;IE<loop;IE++){ 
-			val I=IE;
-			
-			//read triples to memeory
-			finish for( p in Place.places()){
-				at (p) async {
-					triple_list(here.id).clear();
-					System.gc();					
-					for(var f111:Int=here.id+N*I;f111<N*(I+1);f111=f111+N){
-						val s1="/data/lubm1b_8k/"+f111.toString()+".nt.gz";
-						var lstring:String=gzRead(s1);
-						var len:Int=lstring.length();
-						var start:Int=0;
-						var end:Int=0;
-						var line:String;
-						var value:Array[String];
-						while(start<len) {
-							value=new Array[String](2);
-							end=lstring.indexOf('\n',start);
-							line=lstring.substring(start,end);
-							start=end+1;
-							triple_list(here.id).add(line);
-						}
+		//read triples to memeory
+		finish for( p in Place.places()){
+			at (p) async {	
+				var pn:Int=here.id;
+				for(var f111:Int=pn*I;f111<pn*(I+1);f111++){
+					val s1="/data/"+f111.toString()+".nt.gz";
+					var lstring:String=gzRead(s1);
+					var len:Int=lstring.length();
+					var start:Int=0;
+					var end:Int=0;
+					var line:String;
+					var value:Array[String];
+					while(start<len) {
+						value=new Array[String](2);
+						end=lstring.indexOf('\n',start);
+						line=lstring.substring(start,end);
+						start=end+1;
+						triple_list(here.id).add(line);
 					}
 				}
 			}
-			
-			var read_start_1:Long=System.currentTimeMillis();
-			
-			//initilize local object			
-			finish for (p in table.dist.places()){
-				at (p) async {key_collector(here.id)=new ArrayList[Array[String]](N);
+		}
+		
+		//start to encode
+		var encode_start:Long=System.currentTimeMillis();
+		
+		//initilize local object			
+		finish for (p in table.dist.places()){
+			at (p) async {
+				key_collector(here.id)=new ArrayList[Array[String]](N);
 				table_0(here.id)= new ArrayList[RemoteArray[Char]](N);
 				table_2_value(here.id)= new ArrayList[RemoteArray[Long]](N);
 				term_collector(here.id)=new ArrayList[String]();
 				counters(here.id)=new Array[Int](1,0);
-				}
 			}
-			
-			finish for( p in Place.places()){
-				at (p) async {
-					var hash_collector:Array[HashSet[String]]=new Array[HashSet[String]](N); 
-					for(n in (0..(N-1))){
-						hash_collector(n)=new HashSet[String]();
-					}
-					
-					var ns:String;
-					var value:Array[String];
-					for(line in triple_list(here.id)){						
-						value=new Array[String](2);
-						value=Parsing(line);   //parsing
-						//if(value(0)!=null) {
-						for( i in (0..2)){
-							var loc:Int=RSHash(value(i),N);
-							if(!hash_collector(loc).contains(value(i))){
-								hash_collector(loc).add(value(i));
-							}
-							term_collector(here.id).add(value(i));
-						}
-						//} //end if  this part for N-Quad parsing 
-					} //end for line
-					
-					for(n in (0..(N-1))){
-						var size:Int=hash_collector(n).size();
-						counters(here.id)(0)+=size;
-						key_collector(here.id)(n)=new Array[String](size);
-						val iter= hash_collector(n).iterator();
-						var j:Int=0;
-						while(iter.hasNext()){
-							val entry=iter.next();
-							key_collector(here.id)(n)(j)= entry;
-							j++;
-						}
-					}
-					//Console.OUT.println("Hash Collector Finished FROM "+here.id);
-					var Ser_1:Array[Char];
-					for( k in (0..(N-1))) {  //push keys
-						val kk=k;
-						val pk=Place.place(k);
-						val size=key_collector(here.id)(k).size;
-						var num:Int=0;
-						var a:Int;
-						for (k_1 in (0..(size-1))){
-							a=key_collector(here.id)(k)(k_1).length()+1;
-							num+=a;
-						}
-						Ser_1=new Array[Char](num);
-						Serialize(key_collector(here.id)(k),Ser_1);
-						val SIZE=Ser_1.size;
-						val local=here.id;
-						at(pk){
-							table_0(here.id)(local)= new RemoteArray(new Array[Char](SIZE));
-						}
-						Array.asyncCopy( Ser_1, at (pk) table_0(here.id)(local));
-					}
-					//Console.OUT.println("items push finished from: "+here.id);
-				}
-			}
-			
-			//push back
-			finish for( p in Place.places()){
-				at (p) async {
-					val loc_2=here.id;	
-					var id_1:Long=0;  //if hit use id_1
-					var id_2:Long=loc_2+N*table(here.id).size(); //if miss use id_2
-					
-					//prepare for output dictionay	
-					//var DictFile_k:ArrayList[String]=new ArrayList[String]();
-					//var DictFile_v:ArrayList[Long]=new ArrayList[Long]();
-					var Deser_1:Array[String];
-					var value_2:Array[Long];
-					for( k in (0..(N-1))) {
-						val kk_2=k;
-						val pk_2=Place.place(k);
-						val size=table_0(here.id)(k).size;							
-						var num:Int=0;
-						for(k_2 in (0..(size-1))){
-							if(table_0(here.id)(k)(k_2)=='\n') {
-								num++;
-							}
-						}
-						Deser_1=new Array[String](num);
-						DeSerialize(table_0(here.id)(k),Deser_1);
-						val SIZE_2=Deser_1.size;
-						value_2=new Array[Long](SIZE_2);
-						var e:Int=0;
-						for (i in (0..(SIZE_2-1))){
-							var s:String=Deser_1(i);
-							if(table(here.id).containsKey(s)){
-								id_1=table(here.id).get(s).value;
-								value_2(e)=id_1	;
-								e++;
-							}
-							else {
-								id_2+=N;
-								table(here.id).put(s,id_2);
-								value_2(e)=id_2;
-								e++;
-								//DictFile_k.add(s);
-								//DictFile_v.add(id_2);
-							}
-						}
-						at (pk_2) {
-							table_2_value(here.id)(loc_2)=new RemoteArray(new Array[Long](SIZE_2));   
-						}                                  
-						Array.asyncCopy(value_2,at(pk_2) table_2_value(here.id)(loc_2));    
-					}
-				}  //end async
-			} //end finish
-			
-			//Encode and Output 
-			finish for( p in Place.places()){
-				at (p) async {    
-					
-					var opath:String="/data/RDF_Processing/data_1b/"+here.id.toString()+".long";
-					var OutFile:File=new File(opath);
-					val pr=OutFile.printer(true);
-					var tmp_dict:HashMap[String,Long]=new HashMap[String,Long](counters(here.id)(0));
-					var SIZE_3:Int;
-					for( k in (0..(N-1))) {
-						SIZE_3=table_2_value(here.id)(k).size; 					
-						for (i in (0..(SIZE_3-1))){
-							tmp_dict.put(key_collector(here.id)(k)(i),table_2_value(here.id)(k)(i));
-						}
-					}	
-					
-					//print out the encoded triples in integer
-					var id_final:Long;
-					for(term in term_collector(here.id)){
-						id_final=tmp_dict.get(term).value;
-						pr.println(id_final);
-					}
-					pr.flush();
-					pr.close();					
-				}
-			}
-			
-			var encode_end_1:Long=System.currentTimeMillis();
-			Console.OUT.println(IE+" ENCODE TAKES "+(encode_end_1-read_start_1)+" ms///////////////"); 
 		}
+		
+		finish for( p in Place.places()){
+			at (p) async {
+				var hash_collector:Array[HashSet[String]]=new Array[HashSet[String]](N); 
+				for(n in (0..(N-1))){
+					hash_collector(n)=new HashSet[String]();
+				}
+				
+				var ns:String;
+				var value:Array[String];
+				for(line in triple_list(here.id)){						
+					value=new Array[String](2);
+					value=Parsing(line);   //parsing
+					//if(value(0)!=null) {
+					for( i in (0..2)){
+						var loc:Int=RSHash(value(i),N);
+						if(!hash_collector(loc).contains(value(i))){
+							hash_collector(loc).add(value(i));
+						}
+						term_collector(here.id).add(value(i));
+					}
+					//} //end if  this part for N-Quad parsing 
+				} //end for line
+				
+				for(n in (0..(N-1))){
+					var size:Int=hash_collector(n).size();
+					counters(here.id)(0)+=size;
+					key_collector(here.id)(n)=new Array[String](size);
+					val iter= hash_collector(n).iterator();
+					var j:Int=0;
+					while(iter.hasNext()){
+						val entry=iter.next();
+						key_collector(here.id)(n)(j)= entry;
+						j++;
+					}
+				}
+				
+				var Ser_1:Array[Char];
+				for( k in (0..(N-1))) {  //push keys
+					val kk=k;
+					val pk=Place.place(k);
+					val size=key_collector(here.id)(k).size;
+					var num:Int=0;
+					var a:Int;
+					for (k_1 in (0..(size-1))){
+						a=key_collector(here.id)(k)(k_1).length()+1;
+						num+=a;
+					}
+					Ser_1=new Array[Char](num);
+					Serialize(key_collector(here.id)(k),Ser_1);
+					val SIZE=Ser_1.size;
+					val local=here.id;
+					at(pk){
+						table_0(here.id)(local)= new RemoteArray(new Array[Char](SIZE));
+					}
+					Array.asyncCopy( Ser_1, at (pk) table_0(here.id)(local));
+				}
+			}
+		}
+		
+		//push back
+		finish for( p in Place.places()){
+			at (p) async {
+				val loc_2=here.id;	
+				var id_1:Long=0;  //if hit use id_1
+				var id_2:Long=loc_2+N*table(here.id).size(); //if miss use id_2
+				
+				//prepare for output dictionay	
+				//var DictFile_k:ArrayList[String]=new ArrayList[String]();
+				//var DictFile_v:ArrayList[Long]=new ArrayList[Long]();
+				var Deser_1:Array[String];
+				var value_2:Array[Long];
+				for( k in (0..(N-1))) {
+					val kk_2=k;
+					val pk_2=Place.place(k);
+					val size=table_0(here.id)(k).size;							
+					var num:Int=0;
+					for(k_2 in (0..(size-1))){
+						if(table_0(here.id)(k)(k_2)=='\n') {
+							num++;
+						}
+					}
+					Deser_1=new Array[String](num);
+					DeSerialize(table_0(here.id)(k),Deser_1);
+					val SIZE_2=Deser_1.size;
+					value_2=new Array[Long](SIZE_2);
+					var e:Int=0;
+					for (i in (0..(SIZE_2-1))){
+						var s:String=Deser_1(i);
+						if(table(here.id).containsKey(s)){
+							id_1=table(here.id).get(s).value;
+							value_2(e)=id_1	;
+							e++;
+						}
+						else {
+							id_2+=N;
+							table(here.id).put(s,id_2);
+							value_2(e)=id_2;
+							e++;
+							//DictFile_k.add(s);
+							//DictFile_v.add(id_2);
+						}
+					}
+					at (pk_2) {
+						table_2_value(here.id)(loc_2)=new RemoteArray(new Array[Long](SIZE_2));   
+					}                                  
+					Array.asyncCopy(value_2,at(pk_2) table_2_value(here.id)(loc_2));    
+				}
+			}  //end async
+		} //end finish
+		
+		//Encode and Output 
+		finish for( p in Place.places()){
+			at (p) async {    
+				
+				var opath:String="/data/RDF_Processing/data_1b/"+here.id.toString()+".long";
+				var OutFile:File=new File(opath);
+				val pr=OutFile.printer(true);
+				var tmp_dict:HashMap[String,Long]=new HashMap[String,Long](counters(here.id)(0));
+				var SIZE_3:Int;
+				for( k in (0..(N-1))) {
+					SIZE_3=table_2_value(here.id)(k).size; 					
+					for (i in (0..(SIZE_3-1))){
+						tmp_dict.put(key_collector(here.id)(k)(i),table_2_value(here.id)(k)(i));
+					}
+				}	
+				
+				//print out the encoded triples in integer
+				var id_final:Long;
+				for(term in term_collector(here.id)){
+					id_final=tmp_dict.get(term).value;
+					pr.println(id_final);
+				}
+				pr.flush();
+				pr.close();					
+			}
+		}
+		
 		var encode_end:Long=System.currentTimeMillis();
-		Console.OUT.println("///////////WHOLE ENCODE FINISHS "+(encode_end-read_start)+" ms///////////////");                       		
+		Console.OUT.println("///////////DISK-BASED ENCODING TAKES "+(encode_end-read_start)+" ms///////////////");                       		
 	}
 }
