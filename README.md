@@ -9,7 +9,7 @@ basic test code for Large-scale RDF data encoding using X10
 
 2, How to run the test codes:
     (a) divide triples into chunks and compress them in the form of .gz;
-    (b) assign the input path by changing the line 221, and output path at line 366; and
+    (b) assign the input path by changing the line 212, and output path at line 358; and
     (c) compile the encode.x10 code using the commond: x10c++ -O -NO_CHECKS -o encode encode.x10 -post '# -lz'
 
 3, How to set the enviorment of x10, please refer to http://x10-lang.org/.
