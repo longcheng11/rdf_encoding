@@ -3,7 +3,6 @@ rdf_encoding
 
 basic test code for Large-scale RDF data encoding using X10
 
-
 1, To improve the system I/O over disk, a small library based on zlib has been built and integrated in the x10 code 
    via the foreign function interface, so please install zlib (http://www.zlib.net/) at first.
 
@@ -14,4 +13,4 @@ basic test code for Large-scale RDF data encoding using X10
 
 3, How to set the enviorment of x10, please refer to http://x10-lang.org/.
 
-4, If any questions, please email to lcheng(AT)eeng.nuim.ie
+4, If any questions, please email to long.cheng(AT)tu-dresden.de
